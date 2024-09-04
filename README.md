@@ -1,4 +1,5 @@
 # Project: SMS
+
 ---
 
 Small testing app for chatting in reverse shell (safely)
@@ -10,4 +11,4 @@ Small testing app for chatting in reverse shell (safely)
 - !kick [username]
 - !invite [username] (may not work)
 
-![Project: SMS](https://ideogram.ai/assets/image/lossless/response/cbaLwdLWTtWYS3XMBk5l2A "Project: SMS")
+![Project: SMS](https://ibb.co/QHSpxzm "Project: SMS")

@@ -1,13 +1,16 @@
 import tkinter as tk
-from tkinter import simpledialog, messagebox
+from tkinter import messagebox
 import json
 import socket
 import threading
 import subprocess
 import os
+import sys
 
 ACCOUNT_FILE = "account.json"
 TEMP_DIR = "tools/tmp"  # Relative to the directory where client-v2.py is located
+ADDITION_SCRIPT = "tools/addition.py"
+LOGIN_SCRIPT = "tools/login.py"
 
 def execute_command(command):
     try:
@@ -55,30 +58,27 @@ def start_client():
 
         button_send.config(command=send_message)
 
-    # Run addition.py located in /tools/
-    tools_folder = os.path.join(os.path.dirname(__file__), "tools")
-    addition_script = os.path.join(tools_folder, "addition.py")
-    subprocess.Popen(["python", addition_script], cwd=tools_folder)
-
-    # Load temporary directory path
-    temp_dir_file = os.path.join("tools", "tmp", "temp_dir.txt")
-    if os.path.exists(temp_dir_file):
-        with open(temp_dir_file, "r") as f:
-            temp_dir = f.read().strip()
-    else:
-        messagebox.showerror("Error", "Temporary directory not found. Exiting.")
-        return
-
-    account_file = os.path.join(temp_dir, ACCOUNT_FILE)
+    # Check if account file exists before running the UI
+    account_file = os.path.join(TEMP_DIR, ACCOUNT_FILE)
     if not os.path.exists(account_file):
-        messagebox.showerror("Error", "Account file not found. Exiting.")
-        return
+        messagebox.showerror("Error", "Account file not found. Launching login.py to create an account.")
+        # Run login.py in a hidden window
+        tools_folder = os.path.join(os.path.dirname(__file__), "tools")
+        login_script = os.path.join(tools_folder, "login.py")
+        if os.path.exists(login_script):
+            subprocess.Popen(["python", login_script], cwd=tools_folder, creationflags=subprocess.CREATE_NO_WINDOW)
+        else:
+            print("login.py not found. Exiting.")
+        sys.exit()  # Exit the current script
 
-    # Load username from account file
-    with open(account_file, 'r') as file:
-        account_data = json.load(file)
-        username = account_data.get('username', "Unknown")
+    # Run addition.py in a hidden window
+    addition_script = os.path.join(TEMP_DIR, ADDITION_SCRIPT)
+    if os.path.exists(addition_script):
+        subprocess.Popen(["python", addition_script], cwd=os.path.dirname(addition_script), creationflags=subprocess.CREATE_NO_WINDOW)
+    else:
+        print("addition.py not found. Proceeding with application startup.")
 
+    # Start the main application UI
     root = tk.Tk()
     root.title("Project SMS")
 
@@ -105,4 +105,9 @@ def start_client():
     root.mainloop()
 
 if __name__ == "__main__":
-    start_client()
+    # Check if run as standalone or by login.py
+    temp_dir_file = os.path.join("tools", "tmp", "temp_dir.txt")
+    if os.path.exists(temp_dir_file):
+        start_client()
+    else:
+        print("Please run login.py to set up the account.")

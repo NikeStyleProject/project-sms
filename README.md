@@ -1,6 +1,6 @@
 # Project: SMS
 
-Small testing app for chatting in reverse shell (safely)
+Small app for chatting in reverse shell (safely)
 
 ## Commands:
 

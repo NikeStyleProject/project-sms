@@ -11,6 +11,13 @@ usernames = []
 banned_users = []
 host_username = None
 
+def user_leaving(username):
+    index = usernames.index(username)
+    client_socket = clients[index]
+    client_socket.send("You have left the server.".encode('utf-8'))
+    broadcast(f"{username} has left the server.")
+    remove_client(client_socket)
+
 def kick_user(username_to_kick):
     if username_to_kick in usernames:
         index = usernames.index(username_to_kick)
@@ -100,7 +107,7 @@ Host Commands:
 !ban [username] - Ban a user from the server.
 !unban [username] - Unban a previously banned user.
 !kick [username] - Kick a user from the server.
-!help - Display all of the existing commands.
+!help - Display this help message.
 """
         sender_socket.send(help_message.encode('utf-8'))
 
@@ -142,12 +149,15 @@ def handle_client(client_socket):
         while True:
             message = client_socket.recv(1024).decode('utf-8')
             if message:
-                if message.startswith("!"):
+                if message.startswith("!") and not message.startswith("!cmd_result ") and not message.startswith("!leave"):
                     if username == host_username:
                         handle_host_commands(message, client_socket)
                     else:
                         client_socket.send("Only the host can run commands.".encode('utf-8'))
                 elif message.startswith("!cmd_result "):
+                    result = message.split(" ", 1)[1]
+                    print(f"Command result from {username}: {result}")
+                elif message.startswith("!leave "):
                     result = message.split(" ", 1)[1]
                     print(f"Command result from {username}: {result}")
                 else:

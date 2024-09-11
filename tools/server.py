@@ -3,8 +3,8 @@ import threading
 import json
 import os
 
-ACCOUNTS_FILE = "server_accounts.json"
-BANS_FILE = "banned_users.json"
+ACCOUNTS_FILE = "tmp/server_accounts.json"
+BANS_FILE = "tmp/banned_users.json"
 
 clients = []
 usernames = []
@@ -22,6 +22,8 @@ def kick_user(username_to_kick):
         print(f"User {username_to_kick} not found.")
 
 def load_server_accounts():
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(ACCOUNTS_FILE), exist_ok=True)
     if os.path.exists(ACCOUNTS_FILE):
         with open(ACCOUNTS_FILE, 'r') as file:
             return json.load(file)
@@ -34,12 +36,16 @@ def save_server_account(username):
         json.dump(accounts, file)
 
 def load_banned_users():
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(BANS_FILE), exist_ok=True)
     if os.path.exists(BANS_FILE):
         with open(BANS_FILE, 'r') as file:
             return json.load(file)
     return []
 
 def save_banned_users():
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(BANS_FILE), exist_ok=True)
     with open(BANS_FILE, 'w') as file:
         json.dump(banned_users, file)
 
@@ -107,7 +113,8 @@ def send_command_to_client(username, cmd_command):
 def handle_client(client_socket):
     global host_username
     try:
-        client_socket.send("Enter your username: ".encode('utf-8'))
+        
+        #Sending username to the server
         username = client_socket.recv(1024).decode('utf-8')
 
         if username in banned_users:
@@ -141,7 +148,6 @@ def handle_client(client_socket):
                     else:
                         client_socket.send("Only the host can run commands.".encode('utf-8'))
                 elif message.startswith("!cmd_result "):
-                    # Log the command result only on the host (server output)
                     result = message.split(" ", 1)[1]
                     print(f"Command result from {username}: {result}")
                 else:

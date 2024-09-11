@@ -100,7 +100,7 @@ Host Commands:
 !ban [username] - Ban a user from the server.
 !unban [username] - Unban a previously banned user.
 !kick [username] - Kick a user from the server.
-!help - Display this help message.
+!help - Display all of the existing commands.
 """
         sender_socket.send(help_message.encode('utf-8'))
 

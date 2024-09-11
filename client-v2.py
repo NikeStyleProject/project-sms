@@ -37,27 +37,41 @@ def receive_messages(client, text_area):
             client.close()
             break
 
+
 def start_client():
-    def on_connect():
-        connection_code = entry_connection.get()
-        server_ip, server_port = connection_code.split(":")
-        server_port = int(server_port)
+    def on_connect_test():
+        if connection_started or connected:
+            messagebox.showinfo("Can't connect again", "Connected to the server. Type !leave to leave the server")
+        else:
+            on_connect()
+            
+        def on_connect():
+            global connection_started
+            connection_started = True
+                    
+            connection_code = entry_connection.get()
+            server_ip, server_port = connection_code.split(":")
+            server_port = int(server_port)
 
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((server_ip, server_port))
+            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client.connect((server_ip, server_port))
 
-        receive_thread = threading.Thread(target=receive_messages, args=(client, text_area))
-        receive_thread.start()
+            connection_started = False
+            global connected
+            connected = True
 
-        def send_message():
-            message = entry_message.get()
-            if message:
-                client.send(message.encode('utf-8'))
-                entry_message.delete(0, tk.END)  # Clear input after sending
+            receive_thread = threading.Thread(target=receive_messages, args=(client, text_area))
+            receive_thread.start()
+
+            def send_message():
+                message = entry_message.get()
+                if message:
+                    client.send(message.encode('utf-8'))
+                    entry_message.delete(0, tk.END)  # Clear input after sending
         
-        client.send(client_username.encode('utf-8'))
+            client.send(client_username.encode('utf-8'))
 
-        button_send.config(command=send_message)
+            button_send.config(command=send_message)
 
     # Check if account file exists before running the client
     account_file = os.path.join(TEMP_DIR, ACCOUNT_FILE)
@@ -95,7 +109,7 @@ def start_client():
     entry_connection = tk.Entry(frame, width=30)
     entry_connection.pack()
 
-    button_connect = tk.Button(frame, text="Connect", command=on_connect)
+    button_connect = tk.Button(frame, text="Connect", command=on_connect_test)
     button_connect.pack(pady=5)
 
     text_area = tk.Text(frame, height=15, width=50, wrap=tk.WORD, state=tk.DISABLED)

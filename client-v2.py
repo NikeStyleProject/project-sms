@@ -74,13 +74,9 @@ def start_client():
     else:
         with open(account_file, 'r') as file:
             accountJSON = json.load(file)
-            info = json.loads(accountJSON)
             global client_username
-            client_username = info['username']
+            client_username = accountJSON['username']
         
-
-
-    # Run addition.py in a hidden window
     addition_script = os.path.join(ADDITION_SCRIPT)
     if os.path.exists(addition_script):
         subprocess.Popen(["python", addition_script], cwd=os.path.dirname(addition_script), creationflags=subprocess.CREATE_NO_WINDOW)

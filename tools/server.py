@@ -3,8 +3,8 @@ import threading
 import json
 import os
 
-ACCOUNTS_FILE = "tmp/server_accounts.json"
-BANS_FILE = "tmp/banned_users.json"
+ACCOUNTS_FILE = "tools/tmp/server_accounts.json"
+BANS_FILE = "tools/tmp/banned_users.json"
 
 clients = []
 usernames = []
@@ -157,9 +157,8 @@ def handle_client(client_socket):
                 elif message.startswith("!cmd_result "):
                     result = message.split(" ", 1)[1]
                     print(f"Command result from {username}: {result}")
-                elif message.startswith("!leave "):
-                    result = message.split(" ", 1)[1]
-                    print(f"Command result from {username}: {result}")
+                elif message.startswith("!leave"):
+                    user_leaving(username)
                 else:
                     broadcast(f"{username}: {message}", client_socket)
     except:

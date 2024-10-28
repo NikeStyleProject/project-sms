@@ -12,8 +12,8 @@ Small app for chatting in local network
 ## ToDo List:
 
 - [x] Connect to git
-- [] 123
-- [] 123
+- [ ] 123
+- [ ] 1234
 
 
 ___
